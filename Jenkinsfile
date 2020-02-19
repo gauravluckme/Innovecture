@@ -40,24 +40,31 @@ pipeline {
             steps {
                 sh 'mvn test'
             }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
-            }
         }
         stage('Deploy') {
             agent  { node { label 'deploy' } }
             steps {
-                sh './jenkins/scripts/deliver.sh'
+								sh '''
+										## Maven command installs your Maven-built Java application
+										mvn jar:jar install:install help:evaluate -Dexpression=project.name
+										
+										## Maven command extracts the value of the <name/> element
+										NAME=`mvn help:evaluate -Dexpression=project.name | grep "^[^\[]"`
+										
+										## Maven command extracts the value of the <version/> element
+										VERSION=`mvn help:evaluate -Dexpression=project.version | grep "^[^\[]"`
+										
+										## Command runs and outputs the execution of application to the Jenkins Console
+										java -jar target/${NAME}-${VERSION}.jar
+										'''
             }
         }
-		}
+	}
     
-		post {
-			// Things that we want do regardless of pipeline's outcome
-			//
-			always {
+	post {
+		// Things that we want do regardless of pipeline's outcome
+		//
+		always {
         	node (Build){
 					script{
 						  echo "Pipe Duration (millisec): ${currentBuild.duration}"
